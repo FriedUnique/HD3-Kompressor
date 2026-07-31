@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from config import ScopeConfig
-from data_io import KELVIN, load_data, sample_hours, steady, window
+from data_io import KELVIN, load_data, sample_hours, steady_state, window
 from eei_model import cop_norm, ew, eei_load_curve, eei_load_regression, eei_regression_predict
 from metrics import ashrae_metrics, standard_error, weighted_r2
 
@@ -10,8 +10,8 @@ from metrics import ashrae_metrics, standard_error, weighted_r2
 def compute_savings(cfg: ScopeConfig) -> dict:
     df = load_data(cfg)
     sample_duration_hours = sample_hours(df)
-    base_df = steady(window(df, cfg, cfg.baseline), cfg)
-    eval_df = steady(window(df, cfg, cfg.evaluation), cfg)
+    base_df = steady_state(window(df, cfg, cfg.baseline), cfg)
+    eval_df = steady_state(window(df, cfg, cfg.evaluation), cfg)
 
     for period_df in (base_df, eval_df):
         period_df["cop_carnot"] = (period_df["TEVAP"] + KELVIN) / period_df["lift"]
@@ -24,6 +24,8 @@ def compute_savings(cfg: ScopeConfig) -> dict:
     # (1) lift-only: constant baseline EEI at each after-samples Carnot limit
     cop_norm_lift = cop_norm(eval_df, pd.Series(EEI_base, index=eval_df.index))
 
+
+
     # (2) lift + load, BINNING method: baseline EEI as function of load, via bins + interpolation
     q_centers, EEI_curve = eei_load_curve(base_df, cfg)
     EEI_load_bin = pd.Series(np.interp(eval_df["Q"].values, q_centers, EEI_curve), index=eval_df.index)
@@ -32,6 +34,9 @@ def compute_savings(cfg: ScopeConfig) -> dict:
     EEI_base_bin_pred = np.interp(base_df["Q"].values, q_centers, EEI_curve)
     EEI_bin_se = standard_error(base_df["EEI"].values, EEI_base_bin_pred)
     EEI_bin_r2 = weighted_r2(base_df["EEI"].values, EEI_base_bin_pred, base_df["E"].values)
+
+
+
 
     # (3) lift + load, REGRESSION method: weighted polynomial fit of EEI vs load
     q_base_min = float(base_df["Q"].min())
@@ -47,11 +52,10 @@ def compute_savings(cfg: ScopeConfig) -> dict:
     EEI_reg_se = standard_error(base_df["EEI"].values, EEI_base_reg_pred)
     EEI_reg_r2 = weighted_r2(base_df["EEI"].values, EEI_base_reg_pred, base_df["E"].values)
 
-    # share of the evaluation period operating outside the baseline's observed
-    # load range, i.e. relying on the flat-extrapolation assumption rather than
-    # a genuine fit, for either method
-    extrapolated = (eval_df["Q"].values < q_base_min) | (eval_df["Q"].values > q_base_max)
-    extrapolation_share = float(np.mean(extrapolated)) if len(extrapolated) else float("nan")
+
+
+
+
 
     q_eval = eval_df["Q"].sum() * sample_duration_hours
     e_actual = eval_df["E"].sum() * sample_duration_hours
@@ -92,7 +96,7 @@ def compute_savings(cfg: ScopeConfig) -> dict:
         bin_NMBE = bin_metrics["NMBE"], bin_CV_RMSE = bin_metrics["CV_RMSE"],
         reg_NMBE = reg_metrics["NMBE"], reg_CV_RMSE = reg_metrics["CV_RMSE"],
 
-        extrapolation_share=extrapolation_share,
+
         reg_degree=len(reg_coeffs) - 1,
 
         q_eval=q_eval,

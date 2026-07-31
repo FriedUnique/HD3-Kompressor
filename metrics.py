@@ -13,9 +13,7 @@ def weighted_r2(y_actual: np.ndarray, y_pred: np.ndarray, weight: np.ndarray) ->
 
 
 def standard_error(f_actual: np.ndarray, f_interp: np.ndarray) -> float:
-    """Standard error (RMSE) of an interpolated/fitted curve against actual values.
-
-    sqrt( (1/n) * sum( (f_actual_i - f_interp_i)^2 ) )
+    """Standard error (RMSE) of an fitted curve against actual values.
     """
     f_actual = np.asarray(f_actual, dtype=float)
     f_interp = np.asarray(f_interp, dtype=float)

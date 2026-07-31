@@ -43,7 +43,7 @@ def eei_load_regression(baseline_df: pd.DataFrame, cfg: ScopeConfig):
     """Fits a weighted polynomial regression of EEI on load (Q), weighted by
     energy (E) with least squares.
     """
-    Q = baseline_df["Q"].values         # independent variable, ambient temperature is handled by cop_norm
+    Q = baseline_df["Q"].values         # independent variable
     EEI = baseline_df["EEI"].values     # dependent variable
     W = baseline_df["E"].values         # weight
 
@@ -75,13 +75,16 @@ def eei_regression_predict(coeffs: np.ndarray, Q: np.ndarray, q_min: float = Non
     """Prediction with regression: EEI_matrix = X_matrix * coefficients_vector."""
     Q = np.asarray(Q, dtype=float)
     if q_min is not None or q_max is not None:
-        Q = np.clip(Q, q_min if q_min is not None else -np.inf, q_max if q_max is not None else np.inf)
+        Q = np.clip(Q, 
+                    q_min if q_min is not None else -np.inf, 
+                    q_max if q_max is not None else np.inf)
+        
     X = np.vander(Q, len(coeffs), increasing=True)
     return X @ coeffs
 
 
 def cop_norm(eval_df: pd.DataFrame, eei_series: pd.Series) -> float:
-    """Aggregate baseline-equivalent COP for a per-sample EEI series."""
+    """Aggregate baseline-equivalent COP for a EEI series."""
     cop_baseline_normalized = eei_series.values * eval_df["cop_carnot"].values
     total_q = eval_df["Q"].sum()
     total_equivalent_e = (eval_df["Q"].values / cop_baseline_normalized).sum()

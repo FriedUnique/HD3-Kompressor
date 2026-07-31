@@ -22,6 +22,8 @@ def load_data(cfg: ScopeConfig) -> pd.DataFrame:
     df["ts"] = pd.to_datetime(df["ts"], utc=True).dt.tz_convert(cfg.tz)
     df["lift"] = df["TCOND"] - df["TEVAP"]
 
+
+    # for steady state
     if "COP" not in df.columns:
         df["COP"] = df["Q"] / df["E"].replace(0, np.nan)
     if "FREQ" not in df.columns:
@@ -41,7 +43,7 @@ def window(df: pd.DataFrame, cfg: ScopeConfig, window_range: Tuple[str, str]) ->
     return df[(df["ts"] >= start_ts) & (df["ts"] < end_ts)]
 
 
-def steady(df: pd.DataFrame, cfg: ScopeConfig) -> pd.DataFrame:
+def steady_state(df: pd.DataFrame, cfg: ScopeConfig) -> pd.DataFrame:
     df_filter = ((df["FREQ"] > cfg.freq_min) & (df["Q"] > 0) & (df["E"] > 0)
                  & (df["COP"].between(cfg.cop_min, cfg.cop_max))
                  & (df["lift"].between(cfg.lift_min, cfg.lift_max)))
